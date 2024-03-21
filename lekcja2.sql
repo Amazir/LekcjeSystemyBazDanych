@@ -155,3 +155,45 @@ from product
 where unitprice > 10
 
 --
+
+create view order_detail
+as
+select orderid, productid, unitprice, quantity, discount,
+       cast(unitprice * quantity * (1-discount) as decimal(10,2)) as value
+from orderdetails
+
+create view order_total_1
+as
+select orderid, cast(sum(unitprice * quantity * (1-discount)) as decimal(10,2)) as total
+from orderdetails
+group by orderid
+
+create view order_total_2
+as
+select orderid, sum(value) as total
+from order_detail
+group by orderid
+
+create or alter view order_total_3
+as
+select o.orderid, cast(o.orderdate as date) orderdate, o.customerid, c.companyname,
+       sum(value) as total
+from order_detail od join orders o on od.orderid = o.orderid
+join customers c on o.customerid = c.customerid
+group by o.orderid, o.orderdate,  o.customerid, c.companyname
+
+create view avail_product
+as
+select productid, categoryid, supplierid, productname, unitprice, unitsinstock
+from product
+where unitsinstock > 0
+
+create view order_details
+as
+select orderid, productid, unitprice, quantity, discount,
+       cast(unitprice * quantity * (1-discount) as decimal(10,2)) as value
+from orderdetails
+
+select * from order_total_3
+         where customerid = 'ALFKI'
+         order by orderid
