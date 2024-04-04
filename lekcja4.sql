@@ -58,3 +58,35 @@ end;
 
 declare @requireddate date = dateadd(day, 7, getdate());
 exec p_add_order2 'ALFKI', 1, @requireddate, 10, 25, 0.12;
+
+alter procedure p_add_detail
+@orderid int, @productid int, @quantity int, @discount decimal(3,2)
+as
+begin
+    begin try
+       begin transaction
+
+       if not exists (select * from avail_product
+                      where productid = @productid and avail_product.unitsinstock >= @quantity)
+           throw 5003, 'No such product', 1
+
+       declare @unitprice decimal(10,2)
+       select @unitprice = unitprice from avail_product where productid = @productid
+
+       insert orderdetails(orderid, productid, unitprice, quantity, discount)
+       values(@orderid, @productid, @unitprice, @quantity, @discount)
+
+       update products
+       set unitsinstock = unitsinstock - @quantity
+       where productid = @productid
+
+       commit
+    end try
+    begin catch
+        rollback
+        ;throw
+    end catch
+end
+
+select productid, productname, unitprice, unitsinstock
+from avail_product where productid = 10
